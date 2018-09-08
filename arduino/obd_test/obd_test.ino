@@ -1,3 +1,5 @@
+#include <OBD2UART.h>
+
 /*
  *      The circuit:
  *
@@ -14,7 +16,6 @@
 
 #include <Arduino.h>
 #include <Wire.h>
-#include <OBD.h>
 
 #include <LiquidCrystal.h>
 
@@ -129,19 +130,18 @@ void loop()
     col   = map(value, 0, 4000, 0, 80)/5;
 
 
-    lcd.setCursor(col, 0);
+    for(int i=0; i<col; i++)
+    {
+      lcd.setCursor(i, 0);
+      lcd.write(4);
+    }
+
     lcd.write(index);
-
-    lcd.setCursor(0, 1);
-    lcd.print(col);
-
-    lcd.setCursor(5, 1);
-    lcd.print(index);
 
     lcd.setCursor(10, 1);
     lcd.print(value);
 
-    delay(10);
+    delay(75);
   }
 
   lcd.clear();
