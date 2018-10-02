@@ -21,6 +21,8 @@ from PyQt4.uic import loadUiType
 
 # import design.py for GUI things
 import design
+import second
+
 import sys
 
 # to open files and sleep()
@@ -46,10 +48,71 @@ class progress_bar_thread(QtCore.QThread):
 			time.sleep(0.2)
 
 
+class Second(QtGui.QMainWindow, second.Ui_MainWindow):
+	def __init__(self):
+		super(Second, self).__init__()
+		self.setupUi(self)
+
+		self.btn_connect.clicked.connect(self.btn_connect_fn)
+		self.btn_refresh.clicked.connect(self.serial_ports_fn)
+
+		self.serial_ports_fn()
+
+	def btn_connect_fn(self):
+		self.hide()
+		self.dialog = mainApp(int(self.combo_baud.currentText()), str(self.combo_ports.currentText()))
+		self.dialog.show()
+
+
+	# check the available serial ports. Cross platform
+	def serial_ports_fn(self):
+		# initialize variable
+		result = []
+
+		# works only if serial is disconnected. because it shuts off ports
+		# while testing their availability
+		# if we running on windows
+		if sys.platform.startswith('win'):
+			ports = ['COM%s' % (i + 1) for i in range(256)]
+
+		# if we are running linux
+		elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
+			ports = glob.glob('/dev/tty[A-Za-z]*')
+
+		# if we are running darwin
+		elif sys.platform.startswith('darwin'):
+			ports = glob.glob('/dev/tty.*')
+
+		# if any other OS
+		else:
+			raise EnvironmentError('Unsupported platform')
+
+		# test every port in the system
+		for port in ports:
+			try:
+				s = serial.Serial(port)
+				s.close()
+				result.append(port)
+
+			except (OSError, serial.SerialException):
+				pass
+
+
+		# put the ports names in the ports drop list
+		self.combo_ports.clear()
+		self.combo_ports.addItems(result)
+
+		if result == []:
+			self.btn_connect.setEnabled(False)
+
+		else:
+			self.btn_connect.setEnabled(True)
+
+
 
 # main GUI class
 class mainApp(QtGui.QMainWindow, design.Ui_MainWindow):
-	def __init__(self):
+	def __init__(self,  baud, port):
 		super(mainApp, self).__init__()
 		self.setupUi(self)
 
@@ -60,8 +123,7 @@ class mainApp(QtGui.QMainWindow, design.Ui_MainWindow):
 		self.action9600.triggered.connect(self.baud_9600)
 		self.action115200.triggered.connect(self.baud_115200)
 
-
-		self.serial_ports_fn()
+		self.connect_serial(port, baud)
 
 		
 		# ser.close()             # close port
@@ -85,53 +147,17 @@ class mainApp(QtGui.QMainWindow, design.Ui_MainWindow):
 
 
 
-	def connect_serial(self, baud):
-		self.ser = serial.Serial(self.port, baud)
+	def connect_serial(self, port, baud):
+		self.ser = serial.Serial(port, baud)
 		print(self.ser.name)
-
-		time.sleep(2)
 
 		self.progress_bar_thread.start()
 
 
 
-	def serial_ports_fn(self):
-			# works only if serial is disconnected. because it shuts off ports
-			# while testing their availability
-
-			# if we running on windows
-			if sys.platform.startswith('win'):
-				ports = ['COM%s' % (i + 1) for i in range(256)]
-
-			# if we are running linux
-			elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
-				ports = glob.glob('/dev/tty[A-Za-z]*')
-
-			# if we are running darwin
-			elif sys.platform.startswith('darwin'):
-				ports = glob.glob('/dev/tty.*')
-
-			# if any other OS
-			else:
-				raise EnvironmentError('Unsupported platform')
-
-			# test every port in the system
-			for i in ports:
-				try:
-					s = serial.Serial(i)
-					s.close()
-
-					self.port = i
-
-
-				except (OSError, serial.SerialException):
-					pass
-
-
-
 def main():
 	App = QtGui.QApplication(sys.argv)
-	form = mainApp()
+	form = Second()
 	form.show()
 	App.exec_()
 
